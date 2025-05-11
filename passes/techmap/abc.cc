@@ -911,6 +911,12 @@ struct abc_output_filter
 
 void AbcModuleState::prepare_module(RTLIL::Design *design, RTLIL::Module *module, AbcSigMap &assign_map, const std::vector<RTLIL::Cell*> &cells,
 	bool dff_mode, std::string clk_str)
+
+void abc_module(RTLIL::Design *design, RTLIL::Module *current_module, std::string script_file, std::string exe_file,
+		std::vector<std::string> &liberty_files, std::vector<std::string> &genlib_files, std::string constr_file,
+		bool cleanup, vector<int> lut_costs, bool dff_mode, std::string clk_str, bool keepff, std::string delay_target,
+		std::string sop_inputs, std::string sop_products, std::string lutin_shared, bool fast_mode,
+		const std::vector<RTLIL::Cell*> &cells, bool show_tempdir, bool sop_mode, bool word_mode, bool abc_dress, std::vector<std::string> &dont_use_cells, const std::string& map_src)
 {
 	map_autoidx = autoidx++;
 
@@ -1473,6 +1479,187 @@ void AbcModuleState::extract(AbcSigMap &assign_map, RTLIL::Design *design, RTLIL
 		{
 			cell_stats[RTLIL::unescape_id(c->type)]++;
 			if (c->type.in(ID(ZERO), ID(ONE))) {
+			if (builtin_lib)
+			{
+				cell_stats[RTLIL::unescape_id(c->type)]++;
+				if (c->type.in(ID(ZERO), ID(ONE))) {
+					RTLIL::SigSig conn;
+					RTLIL::IdString name_y = remap_name(c->getPort(ID::Y).as_wire()->name);
+					conn.first = module->wire(name_y);
+					conn.second = RTLIL::SigSpec(c->type == ID(ZERO) ? 0 : 1, 1);
+					module->connect(conn);
+					continue;
+				}
+				if (c->type == ID(BUF)) {
+					RTLIL::SigSig conn;
+					RTLIL::IdString name_y = remap_name(c->getPort(ID::Y).as_wire()->name);
+					RTLIL::IdString name_a = remap_name(c->getPort(ID::A).as_wire()->name);
+					conn.first = module->wire(name_y);
+					conn.second = module->wire(name_a);
+					module->connect(conn);
+					continue;
+				}
+				if (c->type == ID(NOT)) {
+					RTLIL::Cell *cell = module->addCell(remap_name(c->name), word_mode ? ID($not) : ID($_NOT_)); 
+					if (markgroups) cell->attributes[ID::abcgroup] = map_autoidx;
+					if (!map_src.empty())
+						cell->attributes[ID::src] = map_src;
+					for (auto name : {ID::A, ID::Y}) {
+						RTLIL::IdString remapped_name = remap_name(c->getPort(name).as_wire()->name);
+						cell->setPort(name, module->wire(remapped_name));
+					}
+					cell->fixup_parameters();
+					design->select(module, cell);
+					continue;
+				}
+				if (c->type.in(ID(AND), ID(OR), ID(XOR), ID(NAND), ID(NOR), ID(XNOR), ID(ANDNOT), ID(ORNOT))) {
+					std::string cell_type;
+					if (c->type == ID(AND) && word_mode)
+						cell_type = "$and";
+					else if (c->type == ID(OR) && word_mode)
+						cell_type = "$or";
+					else if (c->type == ID(XOR) && word_mode)
+						cell_type = "$xor";
+					else
+						cell_type = stringf("$_%s_", c->type.c_str()+1);
+
+					RTLIL::Cell *cell = module->addCell(remap_name(c->name), cell_type);
+					if (!map_src.empty())
+						cell->attributes[ID::src] = map_src;
+					if (markgroups) cell->attributes[ID::abcgroup] = map_autoidx;
+					for (auto name : {ID::A, ID::B, ID::Y}) {
+						RTLIL::IdString remapped_name = remap_name(c->getPort(name).as_wire()->name);
+						cell->setPort(name, module->wire(remapped_name));
+					}
+					cell->fixup_parameters();
+					design->select(module, cell);
+					continue;
+				}
+				if (c->type.in(ID(MUX), ID(NMUX))) {
+					std::string cell_type;
+					if (c->type == ID(MUX) && word_mode)
+						cell_type = "$mux";
+					else
+						cell_type = stringf("$_%s_", c->type.c_str()+1);
+
+					RTLIL::Cell *cell = module->addCell(remap_name(c->name), cell_type);
+					if (!map_src.empty())
+						cell->attributes[ID::src] = map_src;
+					if (markgroups) cell->attributes[ID::abcgroup] = map_autoidx;
+					for (auto name : {ID::A, ID::B, ID::S, ID::Y}) {
+						RTLIL::IdString remapped_name = remap_name(c->getPort(name).as_wire()->name);
+						cell->setPort(name, module->wire(remapped_name));
+					}
+					cell->fixup_parameters();
+					design->select(module, cell);
+					continue;
+				}
+				if (c->type == ID(MUX4)) {
+					RTLIL::Cell *cell = module->addCell(remap_name(c->name), ID($_MUX4_));
+					if (!map_src.empty())
+						cell->attributes[ID::src] = map_src;
+					if (markgroups) cell->attributes[ID::abcgroup] = map_autoidx;
+					for (auto name : {ID::A, ID::B, ID::C, ID::D, ID::S, ID::T, ID::Y}) {
+						RTLIL::IdString remapped_name = remap_name(c->getPort(name).as_wire()->name);
+						cell->setPort(name, module->wire(remapped_name));
+					}
+					design->select(module, cell);
+					continue;
+				}
+				if (c->type == ID(MUX8)) {
+					RTLIL::Cell *cell = module->addCell(remap_name(c->name), ID($_MUX8_));
+					if (!map_src.empty())
+						cell->attributes[ID::src] = map_src;
+					if (markgroups) cell->attributes[ID::abcgroup] = map_autoidx;
+					for (auto name : {ID::A, ID::B, ID::C, ID::D, ID::E, ID::F, ID::G, ID::H, ID::S, ID::T, ID::U, ID::Y}) {
+						RTLIL::IdString remapped_name = remap_name(c->getPort(name).as_wire()->name);
+						cell->setPort(name, module->wire(remapped_name));
+					}
+					design->select(module, cell);
+					continue;
+				}
+				if (c->type == ID(MUX16)) {
+					RTLIL::Cell *cell = module->addCell(remap_name(c->name), ID($_MUX16_));
+					if (!map_src.empty())
+						cell->attributes[ID::src] = map_src;
+					if (markgroups) cell->attributes[ID::abcgroup] = map_autoidx;
+					for (auto name : {ID::A, ID::B, ID::C, ID::D, ID::E, ID::F, ID::G, ID::H, ID::I, ID::J, ID::K,
+							ID::L, ID::M, ID::N, ID::O, ID::P, ID::S, ID::T, ID::U, ID::V, ID::Y}) {
+						RTLIL::IdString remapped_name = remap_name(c->getPort(name).as_wire()->name);
+						cell->setPort(name, module->wire(remapped_name));
+					}
+					design->select(module, cell);
+					continue;
+				}
+				if (c->type.in(ID(AOI3), ID(OAI3))) {
+					RTLIL::Cell *cell = module->addCell(remap_name(c->name), stringf("$_%s_", c->type.c_str()+1));
+					if (!map_src.empty())
+						cell->attributes[ID::src] = map_src;
+					if (markgroups) cell->attributes[ID::abcgroup] = map_autoidx;
+					for (auto name : {ID::A, ID::B, ID::C, ID::Y}) {
+						RTLIL::IdString remapped_name = remap_name(c->getPort(name).as_wire()->name);
+						cell->setPort(name, module->wire(remapped_name));
+					}
+					design->select(module, cell);
+					continue;
+				}
+				if (c->type.in(ID(AOI4), ID(OAI4))) {
+					RTLIL::Cell *cell = module->addCell(remap_name(c->name), stringf("$_%s_", c->type.c_str()+1));
+					if (!map_src.empty())
+						 cell->attributes[ID::src] = map_src;
+					if (markgroups) cell->attributes[ID::abcgroup] = map_autoidx;
+					for (auto name : {ID::A, ID::B, ID::C, ID::D, ID::Y}) {
+						RTLIL::IdString remapped_name = remap_name(c->getPort(name).as_wire()->name);
+						cell->setPort(name, module->wire(remapped_name));
+					}
+					design->select(module, cell);
+					continue;
+				}
+				if (c->type == ID(DFF)) {
+					log_assert(clk_sig.size() == 1);
+					FfData ff(module, &initvals, remap_name(c->name));
+					ff.width = 1;
+					ff.is_fine = true;
+					ff.has_clk = true;
+					ff.pol_clk = clk_polarity;
+					ff.sig_clk = clk_sig;
+					if (en_sig.size() != 0) {
+						log_assert(en_sig.size() == 1);
+						ff.has_ce = true;
+						ff.pol_ce = en_polarity;
+						ff.sig_ce = en_sig;
+					}
+					RTLIL::Const init = mapped_initvals(c->getPort(ID::Q));
+					if (had_init)
+						ff.val_init = init;
+					else
+						ff.val_init = State::Sx;
+					if (arst_sig.size() != 0) {
+						log_assert(arst_sig.size() == 1);
+						ff.has_arst = true;
+						ff.pol_arst = arst_polarity;
+						ff.sig_arst = arst_sig;
+						ff.val_arst = init;
+					}
+					if (srst_sig.size() != 0) {
+						log_assert(srst_sig.size() == 1);
+						ff.has_srst = true;
+						ff.pol_srst = srst_polarity;
+						ff.sig_srst = srst_sig;
+						ff.val_srst = init;
+					}
+					ff.sig_d = module->wire(remap_name(c->getPort(ID::D).as_wire()->name));
+					ff.sig_q = module->wire(remap_name(c->getPort(ID::Q).as_wire()->name));
+					RTLIL::Cell *cell = ff.emit();
+					if (markgroups) cell->attributes[ID::abcgroup] = map_autoidx;
+					design->select(module, cell);
+					continue;
+				}
+			}
+			else
+				cell_stats[RTLIL::unescape_id(c->type)]++;
+
+			if (c->type.in(ID(_const0_), ID(_const1_))) {
 				RTLIL::SigSig conn;
 				RTLIL::IdString name_y = remap_name(c->getPort(ID::Y).as_wire()->name);
 				conn.first = module->wire(name_y);
@@ -1489,6 +1676,7 @@ void AbcModuleState::extract(AbcSigMap &assign_map, RTLIL::Design *design, RTLIL
 				connect(assign_map, module, conn);
 				continue;
 			}
+                        // When -word is enabled, prefer RTLIL $logic cells over internal $_* cells
 			if (c->type == ID(NOT)) {
 				RTLIL::Cell *cell = module->addCell(remap_name(c->name), ID($_NOT_));
 				if (markgroups) cell->attributes[ID::abcgroup] = map_autoidx;
@@ -1970,8 +2158,29 @@ struct AbcPass : public Pass {
 	{
 		log_header(design, "Executing ABC pass (technology mapping using ABC).\n");
 		log_push();
+        	AbcConfig config;
+		assign_map.clear();
+		signal_list.clear();
+		signal_map.clear();
+		initvals.clear();
+		pi_map.clear();
+		po_map.clear();
 
-		AbcConfig config;
+		std::string exe_file = yosys_abc_executable;
+		std::string script_file, default_liberty_file, constr_file, clk_str;
+		std::vector<std::string> liberty_files, genlib_files, dont_use_cells;
+		std::string delay_target, sop_inputs, sop_products, lutin_shared = "-S 1";
+		bool fast_mode = false, dff_mode = false, keepff = false, cleanup = true;
+		bool show_tempdir = false, sop_mode = false, word_mode = false;
+		bool abc_dress = false;
+		vector<int> lut_costs;
+		markgroups = false;
+		std::string map_src;
+		map_mux4 = false;
+		map_mux8 = false;
+		map_mux16 = false;
+		enabled_gates.clear();
+		cmos_cost = false;
 
 		// get arguments from scratchpad first, then override by command arguments
 		std::string lut_arg, luts_arg, g_arg;
@@ -2000,6 +2209,12 @@ struct AbcPass : public Pass {
 		config.map_mux8 = design->scratchpad_get_bool("abc.mux8", false);
 		config.map_mux16 = design->scratchpad_get_bool("abc.mux16", false);
 		config.abc_dress = design->scratchpad_get_bool("abc.dress", false);
+		sop_mode = design->scratchpad_get_bool("abc.sop", sop_mode);
+		word_mode = design->scratchpad_get_bool("abc.word", word_mode);
+		map_mux4 = design->scratchpad_get_bool("abc.mux4", map_mux4);
+		map_mux8 = design->scratchpad_get_bool("abc.mux8", map_mux8);
+		map_mux16 = design->scratchpad_get_bool("abc.mux16", map_mux16);
+		abc_dress = design->scratchpad_get_bool("abc.dress", abc_dress);
 		g_arg = design->scratchpad_get_string("abc.g", g_arg);
 
 		config.fast_mode = design->scratchpad_get_bool("abc.fast", false);
@@ -2089,6 +2304,10 @@ struct AbcPass : public Pass {
 			}
 			if (arg == "-sop") {
 				config.sop_mode = true;
+				continue;
+			}
+			if (arg == "-word") {
+				word_mode = true;
 				continue;
 			}
 			if (arg == "-mux4") {
@@ -2379,6 +2598,8 @@ struct AbcPass : public Pass {
 				ConcurrentStack<AbcProcess> process_pool;
 				state.run_abc.run(process_pool);
 				state.extract(assign_map, design, mod);
+				abc_module(design, mod, script_file, exe_file, liberty_files, genlib_files, constr_file, cleanup, lut_costs, dff_mode, clk_str, keepff,
+						delay_target, sop_inputs, sop_products, lutin_shared, fast_mode, mod->selected_cells(), show_tempdir, sop_mode, word_mode, abc_dress, dont_use_cells, map_src);
 				continue;
 			}
 
@@ -2606,6 +2827,17 @@ struct AbcPass : public Pass {
 				work_finished_by_index[next_state_index_to_process]->extract(assign_map, design, mod);
 				work_finished_by_index[next_state_index_to_process] = nullptr;
 				++next_state_index_to_process;
+				clk_polarity = std::get<0>(it.first);
+				clk_sig = assign_map(std::get<1>(it.first));
+				en_polarity = std::get<2>(it.first);
+				en_sig = assign_map(std::get<3>(it.first));
+				arst_polarity = std::get<4>(it.first);
+				arst_sig = assign_map(std::get<5>(it.first));
+				srst_polarity = std::get<6>(it.first);
+				srst_sig = assign_map(std::get<7>(it.first));
+				abc_module(design, mod, script_file, exe_file, liberty_files, genlib_files, constr_file, cleanup, lut_costs, !clk_sig.empty(), "$",
+						keepff, delay_target, sop_inputs, sop_products, lutin_shared, fast_mode, it.second, show_tempdir, sop_mode, word_mode, abc_dress, dont_use_cells, map_src);
+				assign_map.set(mod);
 			}
 		}
 
