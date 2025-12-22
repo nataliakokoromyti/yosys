@@ -1,0 +1,34 @@
+# Test lut2mux pass - default mode (gate-level $_MUX_)
+read_verilog <<EOT
+module top(input [1:0] a, output y);
+assign y = a[0] ^ a[1];
+endmodule
+EOT
+
+synth -lut 2
+select -assert-count 1 t:$lut
+
+# Test default mode: should produce $_MUX_ cells
+design -save gold
+lut2mux
+select -assert-count 3 t:$_MUX_
+select -assert-count 0 t:$mux
+select -assert-count 0 t:$lut
+design -stash gate
+
+# Test -word mode: should produce $mux cells
+design -load gold
+lut2mux -word
+select -assert-count 3 t:$mux
+select -assert-count 0 t:$_MUX_
+select -assert-count 0 t:$lut
+design -stash word
+
+# Verify both implementations are functionally equivalent
+design -copy-from gate -as gate top
+design -copy-from word -as word top
+equiv_make gold top gate top word top
+hierarchy -top equiv
+equiv_simple
+equiv_induct
+equiv_status -assert
