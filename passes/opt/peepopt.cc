@@ -51,6 +51,8 @@ struct PeepoptPass : public Pass {
 		log("\n");
 		log("This pass employs the following rules by default:\n");
 		log("\n");
+		log("   * addsub_c - Replace (A+-B)+-C with A+(B+-C) when B and C are constants.\n");
+		log("\n");
 		log("   * muldiv - Replace (A*B)/B with A\n");
 		log("\n");
 		log("   * muldiv_c - Replace (A*B)/C with A*(B/C) when C is a const divisible by B.\n");
@@ -74,18 +76,48 @@ struct PeepoptPass : public Pass {
 		log("                   based pattern to prevent combinational paths from the\n");
 		log("                   output to the enable input after running clk2fflogic.\n");
 		log("\n");
+		log("If -muxorder is specified it adds the following rule:\n");
+		log("\n");
+		log("   * muxorder - Replace S?(A OP B):A with A OP (S?B:I) where I is identity of OP\n");
+		log("                Ex 1:   S?(A + B):A   --->   A + (S?B:0)\n");
+		log("                Ex 2:   S?(A * B):A   --->   A & (S?B:1)\n");
+		log("\n");
+		log("If -arith-normalize is specified, it runs arithmetic normalization:\n");
+		log("\n");
+		log("   * Convert subtractors to adders with negations: a - b => a + (-b)\n");
+		log("   * Expand negations through adders: -(a + b) => (-a) + (-b)\n");
+		log("\n");
+		log("If -arith-denormalize is specified, it runs arithmetic denormalization:\n");
+		log("\n");
+		log("   * Rebuild subtractors from adders: a + (-b) => a - b\n");
+		log("   * Rebuild negations: (-a) + (-b) => -(a + b)\n");
+		log("\n");
 	}
 	void execute(std::vector<std::string> args, RTLIL::Design *design) override
 	{
 		log_header(design, "Executing PEEPOPT pass (run peephole optimizers).\n");
 
 		bool formalclk = false;
-
+		bool muxorder = false;
+		bool arith_normalize = false;
+		bool arith_denormalize = false;
 		size_t argidx;
 		for (argidx = 1; argidx < args.size(); argidx++)
 		{
 			if (args[argidx] == "-formalclk") {
 				formalclk = true;
+				continue;
+			}
+			if (args[argidx] == "-muxorder") {
+				muxorder = true;
+				continue;
+			}
+			if (args[argidx] == "-arith-normalize") {
+				arith_normalize = true;
+				continue;
+			}
+			if (args[argidx] == "-arith-denormalize") {
+				arith_denormalize = true;
 				continue;
 			}
 			break;
@@ -111,12 +143,24 @@ struct PeepoptPass : public Pass {
 
 				if (formalclk) {
 					pm.run_formal_clockgateff();
+				} else if (arith_normalize) {
+					pm.run_arith_sub_to_add();
+					if (did_something) continue;
+					pm.run_arith_neg_expansion();
+				} else if (arith_denormalize) {
+					pm.run_arith_denormalize_double();  // Run double first (more specific)
+					if (did_something) continue;
+					pm.run_arith_denormalize_single();
 				} else {
 					pm.run_shiftadd();
 					pm.run_shiftmul_right();
 					pm.run_shiftmul_left();
 					pm.run_muldiv();
 					pm.run_muldiv_c();
+					pm.run_addsub_c();
+					pm.run_sub_neg();
+					if (muxorder)
+						pm.run_muxorder();
 				}
 			}
 		}

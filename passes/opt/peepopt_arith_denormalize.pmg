@@ -1,0 +1,103 @@
+pattern arith_denormalize_single
+
+state <SigSpec> add_a
+state <SigSpec> add_b
+state <SigSpec> neg_input
+state <bool> is_signed
+state <bool> neg_on_port_a
+
+match add
+	select add->type == $add
+	select param(add, \A_SIGNED).as_bool() == param(add, \B_SIGNED).as_bool()
+endmatch
+
+code add_a add_b is_signed neg_on_port_a
+	add_a = port(add, \A);
+	add_b = port(add, \B);
+	is_signed = param(add, \A_SIGNED).as_bool();
+	neg_on_port_a = false;
+	branch;
+	neg_on_port_a = true;
+endcode
+
+match neg
+	select neg->type == $neg
+	index <SigSpec> port(neg, \Y) === (neg_on_port_a ? add_a : add_b)
+	filter param(neg, \A_SIGNED).as_bool() == is_signed
+	set neg_input port(neg, \A)
+endmatch
+
+code
+{
+	SigSpec add_y = port(add, \Y);
+	SigSpec non_neg_input = neg_on_port_a ? add_b : add_a;
+
+	did_something = true;
+	log("arith_denormalize_single pattern in %s: add=%s, neg=%s\n",
+		log_id(module), log_id(add), log_id(neg));
+
+	// Create subtractor
+	Cell* sub = module->addSub(NEW_ID, non_neg_input, neg_input, add_y, is_signed);
+	sub->set_src_attribute(add->get_src_attribute());
+
+	autoremove(add);
+	autoremove(neg);
+	accept;
+}
+endcode
+
+pattern arith_denormalize_double
+
+state <SigSpec> neg_a_input
+state <SigSpec> neg_b_input
+state <bool> is_signed
+
+match add
+	select add->type == $add
+	select param(add, \A_SIGNED).as_bool() == param(add, \B_SIGNED).as_bool()
+endmatch
+
+code is_signed
+	is_signed = param(add, \A_SIGNED).as_bool();
+endcode
+
+match neg_a
+	select neg_a->type == $neg
+	index <SigSpec> port(neg_a, \Y) === port(add, \A)
+	filter param(neg_a, \A_SIGNED).as_bool() == is_signed
+	set neg_a_input port(neg_a, \A)
+endmatch
+
+match neg_b
+	select neg_b->type == $neg
+	index <SigSpec> port(neg_b, \Y) === port(add, \B)
+	filter param(neg_b, \A_SIGNED).as_bool() == is_signed
+	set neg_b_input port(neg_b, \A)
+endmatch
+
+code
+{
+	SigSpec add_y = port(add, \Y);
+
+	did_something = true;
+	log("arith_denormalize_double pattern in %s: add=%s, neg_a=%s, neg_b=%s\n",
+		log_id(module), log_id(add), log_id(neg_a), log_id(neg_b));
+
+	// Create new addition of non-negated inputs
+	Wire* inner_add_y = module->addWire(NEW_ID, GetSize(add_y));
+	Cell* inner_add = module->addAdd(NEW_ID, neg_a_input, neg_b_input,
+	                                  inner_add_y, is_signed);
+
+	// Create negation of result
+	Cell* outer_neg = module->addNeg(NEW_ID, inner_add_y, add_y, is_signed);
+
+	// Preserve source location
+	inner_add->set_src_attribute(add->get_src_attribute());
+	outer_neg->set_src_attribute(add->get_src_attribute());
+
+	autoremove(add);
+	autoremove(neg_a);
+	autoremove(neg_b);
+	accept;
+}
+endcode

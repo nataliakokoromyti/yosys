@@ -13,7 +13,6 @@ OBJS += passes/opt/opt_clean.o
 OBJS += passes/opt/opt_expr.o
 OBJS += passes/opt/opt_hier.o
 
-ifneq ($(SMALL),1)
 OBJS += passes/opt/share.o
 OBJS += passes/opt/wreduce.o
 OBJS += passes/opt/opt_demorgan.o
@@ -34,8 +33,12 @@ PEEPOPT_PATTERN += passes/opt/peepopt_shiftmul_left.pmg
 PEEPOPT_PATTERN += passes/opt/peepopt_shiftadd.pmg
 PEEPOPT_PATTERN += passes/opt/peepopt_muldiv.pmg
 PEEPOPT_PATTERN += passes/opt/peepopt_muldiv_c.pmg
+PEEPOPT_PATTERN += passes/opt/peepopt_addsub_c.pmg
+PEEPOPT_PATTERN += passes/opt/peepopt_muxorder.pmg
 PEEPOPT_PATTERN += passes/opt/peepopt_formal_clockgateff.pmg
+PEEPOPT_PATTERN += passes/opt/peepopt_sub_neg.pmg
+PEEPOPT_PATTERN += passes/opt/peepopt_arith_normalize.pmg
+PEEPOPT_PATTERN += passes/opt/peepopt_arith_denormalize.pmg
 
 passes/opt/peepopt_pm.h: passes/pmgen/pmgen.py $(PEEPOPT_PATTERN)
 	$(P) mkdir -p $(dir $@) && $(PYTHON_EXECUTABLE) $< -o $@ -p peepopt $(filter-out $<,$^)
-endif
