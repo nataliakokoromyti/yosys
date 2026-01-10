@@ -1,0 +1,86 @@
+pattern arith_sub_to_add
+
+match sub
+	select sub->type == $sub
+endmatch
+
+code
+{
+	SigSpec sub_a = port(sub, \A);
+	SigSpec sub_b = port(sub, \B);
+	SigSpec sub_y = port(sub, \Y);
+	bool a_signed = param(sub, \A_SIGNED).as_bool();
+	bool b_signed = param(sub, \B_SIGNED).as_bool();
+
+	log_assert(a_signed == b_signed);
+
+	did_something = true;
+	log("arith_sub_to_add pattern in %s: sub=%s\n", log_id(module), log_id(sub));
+
+	// Create negation for B
+	Wire* neg_out = module->addWire(NEW_ID, GetSize(sub_b));
+	Cell* neg_cell = module->addNeg(NEW_ID, sub_b, neg_out, b_signed);
+
+	// Create adder
+	Cell* add_cell = module->addAdd(NEW_ID, sub_a, neg_out, sub_y, a_signed);
+
+	// Preserve source location
+	add_cell->set_src_attribute(sub->get_src_attribute());
+	neg_cell->set_src_attribute(sub->get_src_attribute());
+
+	autoremove(sub);
+	accept;
+}
+endcode
+
+pattern arith_neg_expansion
+
+state <SigSpec> neg_input
+state <bool> is_signed
+
+match neg
+	select neg->type == $neg
+endmatch
+
+code neg_input is_signed
+	neg_input = port(neg, \A);
+	is_signed = param(neg, \A_SIGNED).as_bool();
+endcode
+
+match add
+	select add->type == $add
+	index <SigSpec> port(add, \Y) === neg_input
+	filter nusers(port(add, \Y)) == 2
+	filter param(add, \A_SIGNED).as_bool() == is_signed
+endmatch
+
+code
+{
+	SigSpec add_a = port(add, \A);
+	SigSpec add_b = port(add, \B);
+	SigSpec neg_y = port(neg, \Y);
+
+	did_something = true;
+	log("arith_neg_expansion pattern in %s: neg=%s, add=%s\n",
+		log_id(module), log_id(neg), log_id(add));
+
+	// Create negations for both inputs
+	Wire* neg_a_out = module->addWire(NEW_ID, GetSize(add_a));
+	Wire* neg_b_out = module->addWire(NEW_ID, GetSize(add_b));
+
+	Cell* neg_a = module->addNeg(NEW_ID, add_a, neg_a_out, is_signed);
+	Cell* neg_b = module->addNeg(NEW_ID, add_b, neg_b_out, is_signed);
+
+	// Create new addition
+	Cell* new_add = module->addAdd(NEW_ID, neg_a_out, neg_b_out, neg_y, is_signed);
+
+	// Preserve source location
+	neg_a->set_src_attribute(neg->get_src_attribute());
+	neg_b->set_src_attribute(neg->get_src_attribute());
+	new_add->set_src_attribute(add->get_src_attribute());
+
+	autoremove(neg);
+	autoremove(add);
+	accept;
+}
+endcode
