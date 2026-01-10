@@ -11,7 +11,9 @@ module arith_chain (
 	output [40:0] y1,
 	output [40:0] y2,
 	output [40:0] y3,
-	output [40:0] y4
+	output [40:0] y4,
+	output [40:0] y5,
+	output [40:0] y6
 );
 
 	// Test case 0: Pure addition (should balance but not transform)
@@ -28,5 +30,11 @@ module arith_chain (
 
 	// Test case 4: Paired negations
 	assign y4 = a + b - c - d + e + f - g - h;
+
+	// Test case 5: Negated sum (should exercise arith_neg_expansion - step 2)
+	assign y5 = -(a + b + c + d + e + f + g + h);
+
+	// Test case 6: Negated mixed expression
+	assign y6 = -(a + b + c + d);
 
 endmodule
