@@ -1,0 +1,39 @@
+# Test script for arithmetic optimization pass
+
+# Read the test design
+read_verilog test_arith_opt.v
+
+# Elaborate
+hierarchy -check -top arith_chain
+
+# Show initial design
+write_rtlil test_arith_initial.il
+
+# Run initial processing
+proc
+opt_expr
+opt_clean
+
+write_rtlil test_arith_after_proc.il
+
+# Run arithmetic normalization
+echo on
+peepopt -arith-normalize
+echo off
+
+write_rtlil test_arith_after_normalize.il
+
+# Run tree balancing
+opt_balance_tree -arith
+
+write_rtlil test_arith_after_balance.il
+
+# Run arithmetic denormalization
+echo on
+peepopt -arith-denormalize
+echo off
+
+write_rtlil test_arith_after_denormalize.il
+
+# Show final statistics
+stat
