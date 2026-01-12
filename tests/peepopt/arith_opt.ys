@@ -1,7 +1,7 @@
 # Test script for arithmetic optimization pass
 
 # Read the test design
-read_verilog test_arith_opt.v
+read_verilog arith_opt.v
 
 # Elaborate
 hierarchy -check -top arith_chain
