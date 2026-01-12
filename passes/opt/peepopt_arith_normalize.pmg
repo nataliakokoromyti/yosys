@@ -52,6 +52,7 @@ match add
 	index <SigSpec> port(add, \Y) === neg_input
 	filter nusers(port(add, \Y)) == 2
 	filter param(add, \A_SIGNED).as_bool() == is_signed
+	filter param(add, \B_SIGNED).as_bool() == is_signed
 endmatch
 
 code
