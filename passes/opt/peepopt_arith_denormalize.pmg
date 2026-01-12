@@ -24,6 +24,7 @@ match neg
 	select neg->type == $neg
 	index <SigSpec> port(neg, \Y) === (neg_on_port_a ? add_a : add_b)
 	filter param(neg, \A_SIGNED).as_bool() == is_signed
+	filter nusers(port(neg, \Y)) == 1
 	set neg_input port(neg, \A)
 endmatch
 
@@ -65,6 +66,7 @@ match neg_a
 	select neg_a->type == $neg
 	index <SigSpec> port(neg_a, \Y) === port(add, \A)
 	filter param(neg_a, \A_SIGNED).as_bool() == is_signed
+	filter nusers(port(neg_a, \Y)) == 1
 	set neg_a_input port(neg_a, \A)
 endmatch
 
@@ -72,6 +74,7 @@ match neg_b
 	select neg_b->type == $neg
 	index <SigSpec> port(neg_b, \Y) === port(add, \B)
 	filter param(neg_b, \A_SIGNED).as_bool() == is_signed
+	filter nusers(port(neg_b, \Y)) == 1
 	set neg_b_input port(neg_b, \A)
 endmatch
 
