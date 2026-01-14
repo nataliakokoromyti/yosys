@@ -1,0 +1,53 @@
+# Ensure wreduce propagates width reductions across dependent cells.
+read_rtlil <<'RTLIL'
+module \top
+  wire input 8 \a
+  wire input 8 \b
+  wire input 4 \c
+  wire output 4 \y
+  wire width 9 \sum_full
+  wire width 4 \sum_trunc
+  cell $add \add_full
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 8
+    parameter \B_WIDTH 8
+    parameter \Y_WIDTH 9
+    connect \A \a
+    connect \B \b
+    connect \Y \sum_full
+  end
+  cell $slice \slice
+    parameter \A_WIDTH 9
+    parameter \Y_WIDTH 4
+    parameter \OFFSET 0
+    connect \A \sum_full
+    connect \Y \sum_trunc
+  end
+  cell $add \add_trunc
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 4
+    parameter \B_WIDTH 4
+    parameter \Y_WIDTH 4
+    connect \A \sum_trunc
+    connect \B \c
+    connect \Y \y
+  end
+end
+RTLIL
+
+design -save gold
+
+wreduce
+
+select -assert-count 0 t:$add r:Y_WIDTH=9
+select -assert-count 2 t:$add r:A_WIDTH=4 r:B_WIDTH=4 r:Y_WIDTH=4
+
+design -stash reduced
+
+design -import gold -as gold
+design -import reduced -as reduced
+
+miter -equiv -flatten -make_assert -make_outputs gold reduced miter
+sat -verify -prove-asserts -show-ports miter
