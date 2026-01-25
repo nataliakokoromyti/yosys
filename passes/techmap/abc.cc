@@ -143,6 +143,8 @@ struct AbcConfig
 	bool markgroups = false;
 	pool<std::string> enabled_gates;
 	bool cmos_cost = false;
+	int max_threads = -1;    // -1 means auto (use number of modules)
+	int reserved_cores = 4;  // cores reserved for main thread and other work
 };
 
 struct AbcSigVal {
@@ -1371,7 +1373,7 @@ void RunAbcState::run(ConcurrentStack<AbcProcess> &process_pool)
 		did_run = true;
 		return;
 	}
-	log("Don't call ABC as there is nothing to map.\n");
+	logs.log("Don't call ABC as there is nothing to map.\n");
 }
 
 void emit_global_input_files(const AbcConfig &config)
@@ -1959,6 +1961,16 @@ struct AbcPass : public Pass {
 		log("        preserve naming by an equivalence check between the original and\n");
 		log("        post-ABC netlists (experimental).\n");
 		log("\n");
+		log("    -max_threads <num>\n");
+		log("        maximum number of worker threads for parallel ABC runs. Default is -1,\n");
+		log("        which means auto (use number of modules). Set to 0 to disable parallel\n");
+		log("        execution and run everything on the main thread.\n");
+		log("\n");
+		log("    -reserved_cores <num>\n");
+		log("        number of CPU cores to reserve for the main thread and other work.\n");
+		log("        Default is 4. The actual number of worker threads used is:\n");
+		log("        min(hardware_threads - reserved_cores, max_threads)\n");
+		log("\n");
 		log("When no target cell library is specified the Yosys standard cell library is\n");
 		log("loaded into ABC before the ABC script is executed.\n");
 		log("\n");
@@ -2019,6 +2031,8 @@ struct AbcPass : public Pass {
 		config.cleanup = !design->scratchpad_get_bool("abc.nocleanup", false);
 		config.show_tempdir = design->scratchpad_get_bool("abc.showtmp", false);
 		config.markgroups = design->scratchpad_get_bool("abc.markgroups", false);
+		config.max_threads = design->scratchpad_get_int("abc.max_threads", -1);
+		config.reserved_cores = design->scratchpad_get_int("abc.reserved_cores", 4);
 
 		if (config.cleanup)
 			config.global_tempdir_name = get_base_tmpdir() + "/";
@@ -2148,6 +2162,14 @@ struct AbcPass : public Pass {
 			}
 			if (arg == "-markgroups") {
 				config.markgroups = true;
+				continue;
+			}
+			if (arg == "-max_threads" && argidx+1 < args.size()) {
+				config.max_threads = atoi(args[++argidx].c_str());
+				continue;
+			}
+			if (arg == "-reserved_cores" && argidx+1 < args.size()) {
+				config.reserved_cores = atoi(args[++argidx].c_str());
 				continue;
 			}
 			break;
@@ -2357,6 +2379,119 @@ struct AbcPass : public Pass {
 
 		emit_global_input_files(config);
 
+		// Process non-DFF/non-clock-domain mode in stages
+		if (!dff_mode || !clk_str.empty()) {
+			dict<RTLIL::Module*, AbcSigMap> module_assign_maps;
+			dict<RTLIL::Module*, AbcModuleState*> module_states;
+			std::vector<RTLIL::Module*> modules;
+
+			// STAGE 1: Compute assign_maps and initvals for all modules
+			// Then prepare for ABC runs (sequential)
+			for (auto mod : design->selected_modules())
+			{
+				// Do not allow modules with processes
+				if (mod->processes.size() > 0) {
+					log("Skipping module %s as it contains processes.\n", log_id(mod));
+					continue;
+				}
+
+				AbcSigMap assign_map;
+				assign_map.set(mod);
+
+				// Create an FfInitVals and use it for all ABC runs. FfInitVals only cares about
+				// wires with the ID::init attribute and we don't add or remove any such wires
+				// in this pass.
+				FfInitVals initvals;
+				initvals.set(&assign_map, mod);
+
+				// Populate assign_map
+				for (auto wire : mod->wires())
+					if (wire->port_id > 0 || wire->get_bool_attribute(ID::keep))
+						assign_map.addVal(SigSpec(wire), AbcSigVal(true));
+
+				// Populate assign_map with cell connections
+				std::vector<RTLIL::Cell*> cells = mod->selected_cells();
+				assign_cell_connection_ports(mod, {&cells}, assign_map);
+
+				// Prepare modules for ABC runs
+				AbcModuleState *state = new AbcModuleState(config, initvals, 0);
+				state->prepare_module(design, mod, assign_map, cells, dff_mode, clk_str);
+
+				module_assign_maps[mod] = assign_map;
+				module_states[mod] = state;
+				modules.push_back(mod);
+			}
+
+			// STAGE 2: Run ABC in parallel
+			// Reserve cores for main thread and other work, and don't create more worker
+			// threads than ABC runs (unless explicitly configured).
+			int num_modules = GetSize(modules);
+			int max_threads = config.max_threads;
+			if (max_threads < 0) {
+				// Auto mode: use number of modules as max threads
+				max_threads = num_modules;
+			}
+			if (max_threads <= 1) {
+				// Just do everything on the main thread.
+				max_threads = 0;
+			}
+#ifdef YOSYS_LINK_ABC
+			// ABC doesn't support multithreaded calls so don't call it off the main thread.
+			max_threads = 0;
+#endif
+			int num_worker_threads = ThreadPool::pool_size(config.reserved_cores, max_threads);
+			ConcurrentQueue<AbcModuleState*> work_queue(num_worker_threads);
+			ConcurrentQueue<AbcModuleState*> work_finished_queue;
+			ConcurrentStack<AbcProcess> process_pool;
+			ThreadPool worker_threads(num_worker_threads, [&](int){
+					while (std::optional<AbcModuleState*> work = work_queue.pop_front()) {
+						// Only the `run_abc` component is safe to touch here!
+						(*work)->run_abc.run(process_pool);
+						work_finished_queue.push_back(*work);
+					}
+				});
+			int work_finished_count = 0;
+			for (auto mod : modules) {
+				log("Sending module %s to abc...\n", log_id(mod));
+				log_flush();
+
+				AbcModuleState *state = module_states.at(mod);
+
+				// Make sure we process the results in the order we expect. When we can
+				// process results before the next ABC run, do so, to keep memory usage low(er).
+				while (std::optional<AbcModuleState*> work = work_finished_queue.try_pop_front()) {
+					++work_finished_count;
+				}
+				if (num_worker_threads > 0) {
+					work_queue.push_back(state);
+				} else {
+					// Just run everything on the main thread.
+					state->run_abc.run(process_pool);
+					work_finished_queue.push_back(state);
+				}
+			}
+			work_queue.close();
+			while (work_finished_count < num_modules) {
+				std::optional<AbcModuleState*> work = work_finished_queue.pop_front();
+				(*work)->run_abc.logs.flush();
+				log_flush();
+				++work_finished_count;
+				log("Completed abc on module %d/%d\n", work_finished_count, num_modules);
+				log_flush();
+			}
+
+			// STAGE 3: Extract results and replace original netlist (sequential)
+			for (auto mod : modules)
+			{
+				AbcModuleState *state = module_states.at(mod);
+				AbcSigMap assign_map = module_assign_maps.at(mod);
+				state->extract(assign_map, design, mod);
+				delete state;
+			}
+
+			goto cleanup;
+		}
+
 		for (auto mod : design->selected_modules())
 		{
 			if (mod->processes.size() > 0) {
@@ -2543,17 +2678,21 @@ struct AbcPass : public Pass {
 			}
 
 			// Reserve one core for our main thread, and don't create more worker threads
-			// than ABC runs.
-			int max_threads = assigned_cells.size();
+			// than ABC runs (unless explicitly configured).
+			int max_threads = config.max_threads;
+			if (max_threads < 0) {
+				// Auto mode: use number of domains as max threads
+				max_threads = assigned_cells.size();
+			}
 			if (max_threads <= 1) {
 				// Just do everything on the main thread.
 				max_threads = 0;
 			}
 #ifdef YOSYS_LINK_ABC
-			// ABC does't support multithreaded calls so don't call it off the main thread.
+			// ABC doesn't support multithreaded calls so don't call it off the main thread.
 			max_threads = 0;
 #endif
-			int num_worker_threads = ThreadPool::pool_size(1, max_threads);
+			int num_worker_threads = ThreadPool::pool_size(config.reserved_cores, max_threads);
 			ConcurrentQueue<std::unique_ptr<AbcModuleState>> work_queue(num_worker_threads);
 			ConcurrentQueue<std::unique_ptr<AbcModuleState>> work_finished_queue;
 			ConcurrentStack<AbcProcess> process_pool;
@@ -2615,6 +2754,7 @@ struct AbcPass : public Pass {
 			}
 		}
 
+cleanup:
 		if (config.cleanup) {
 			log("Removing global temp directory.\n");
 			remove_directory(config.global_tempdir_name);
