@@ -60,7 +60,7 @@ SANITIZER =
 # SANITIZER = cfi
 
 # Prefer using ENABLE_DEBUG over setting these
-OPT_LEVEL := -O3
+OPT_LEVEL := -O3 -g
 GCC_LTO :=
 CLANG_LTO := -flto=thin
 
@@ -125,6 +125,11 @@ SED ?= sed
 BISON ?= bison
 STRIP ?= strip
 AWK ?= awk
+
+ifeq ($(OS), Linux)
+LIBS += -ldw -lelf                              # SILIMATE: support for backward-cpp
+CXXFLAGS += -I/usr/include/libdwarf/ -DBACKWARD_HAS_DW
+endif
 
 ifeq ($(OS), Darwin)
 PLUGIN_LINKFLAGS += -undefined dynamic_lookup
