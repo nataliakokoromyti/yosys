@@ -799,28 +799,34 @@ bool run_frontend(std::string filename, std::string command, RTLIL::Design *desi
 		FILE *backup_script_file = Frontend::current_script_file;
 		Frontend::current_script_file = f;
 
-		std::string command;
-		while (fgetline(f, command)) {
-			while (!command.empty() && command[command.size() - 1] == '\\') {
-				std::string next_line;
-				if (!fgetline(f, next_line))
-					break;
-				command.resize(command.size() - 1);
-				command += next_line;
+		try {
+			std::string command;
+			while (fgetline(f, command)) {
+				while (!command.empty() && command[command.size()-1] == '\\') {
+					std::string next_line;
+					if (!fgetline(f, next_line))
+						break;
+					command.resize(command.size()-1);
+					command += next_line;
+				}
+				handle_label(command, from_to_active, run_from, run_to);
+				if (from_to_active) {
+					Pass::call(design, command);
+					design->check();
+				}
 			}
-			handle_label(command, from_to_active, run_from, run_to);
-			if (from_to_active) {
-				Pass::call(design, command);
-				design->check();
+
+			if (!command.empty()) {
+				handle_label(command, from_to_active, run_from, run_to);
+				if (from_to_active) {
+					Pass::call(design, command);
+					design->check();
+				}
 			}
 		}
-
-		if (!command.empty()) {
-			handle_label(command, from_to_active, run_from, run_to);
-			if (from_to_active) {
-				Pass::call(design, command);
-				design->check();
-			}
+		catch (...) {
+			Frontend::current_script_file = backup_script_file;
+			throw;
 		}
 
 		Frontend::current_script_file = backup_script_file;

@@ -126,11 +126,6 @@ BISON ?= bison
 STRIP ?= strip
 AWK ?= awk
 
-ifeq ($(OS), Linux)
-LIBS += -ldw -lelf                              # SILIMATE: support for backward-cpp
-CXXFLAGS += -I/usr/include/libdwarf/ -DBACKWARD_HAS_DW
-endif
-
 ifeq ($(OS), Darwin)
 PLUGIN_LINKFLAGS += -undefined dynamic_lookup
 LINKFLAGS += -rdynamic
@@ -421,6 +416,8 @@ ifneq ($(OS), $(filter $(OS),FreeBSD OpenBSD NetBSD MINGW))
 LIBS += -ldl
 endif
 endif
+
+LIBS += -lbfd # SILIMATE: support for backward-cpp
 
 ifeq ($(ENABLE_GLOB),1)
 CXXFLAGS += -DYOSYS_ENABLE_GLOB
