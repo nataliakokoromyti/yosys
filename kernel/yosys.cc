@@ -21,7 +21,6 @@
 #include "kernel/celltypes.h"
 #include "kernel/log.h"
 
-#define BACKWARD_HAS_DW 1
 #include "libs/backward-cpp/backward.hpp"
 
 #ifdef YOSYS_ENABLE_READLINE

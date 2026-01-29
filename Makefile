@@ -25,6 +25,7 @@ ENABLE_LIBYOSYS := 0
 ENABLE_LIBYOSYS_STATIC := 0
 ENABLE_ZLIB := 1
 ENABLE_HELP_SOURCE := 0
+ENABLE_BACKTRACE := 1
 
 # python wrappers
 ENABLE_PYOSYS := 0
@@ -126,6 +127,11 @@ BISON ?= bison
 STRIP ?= strip
 AWK ?= awk
 
+ifeq ($(OS), Linux)
+LIBS += -ldw                                           # SILIMATE: support for backward-cpp
+CXXFLAGS += -I/usr/include/libdwarf/ -DBACKWARD_HAS_DW # SILIMATE: support for backward-cpp
+endif
+
 ifeq ($(OS), Darwin)
 PLUGIN_LINKFLAGS += -undefined dynamic_lookup
 LINKFLAGS += -rdynamic
@@ -153,8 +159,13 @@ else
 LINKFLAGS += -rdynamic
 ifneq ($(OS), OpenBSD)
 LIBS += -lrt
-LIBS += -ldw                                           # SILIMATE: support for backward-cpp
-CXXFLAGS += -I/usr/include/libdwarf/ -DBACKWARD_HAS_DW # SILIMATE: support for backward-cpp
+endif
+endif
+
+ifeq ($(ENABLE_BACKTRACE),1)
+ifeq ($(OS), Darwin)
+LIBS += -ldwarf -lelf
+CXXFLAGS += -I/usr/include/libdwarf/ -DBACKWARD_HAS_DWARF
 endif
 endif
 
