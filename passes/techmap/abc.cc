@@ -1459,7 +1459,7 @@ void AbcModuleState::extract(AbcSigMap &assign_map, dict<SigSpec, std::string> &
 	RTLIL::Module *mapped_mod = mapped_design->module(ID(netlist));
 	if (mapped_mod == nullptr)
 		log_error("ABC output file does not contain a module `netlist'.\n");
-	SigMap mapped_sigmap(mapped_mod); // SILIMATE: Move mapped sigmap definition here
+SigMap mapped_sigmap(mapped_mod); // Move mapped sigmap definition here
 	bool markgroups = run_abc.config.markgroups;
 	for (auto w : mapped_mod->wires()) {
 		RTLIL::Wire *orig_wire = nullptr;
@@ -1467,7 +1467,7 @@ void AbcModuleState::extract(AbcSigMap &assign_map, dict<SigSpec, std::string> &
 		if (orig_wire != nullptr && orig_wire->attributes.count(ID::src))
 			wire->attributes[ID::src] = orig_wire->attributes[ID::src];
 
-		// SILIMATE: Apply src attribute to the wire from the original wire
+		// Apply src attribute to the wire from the original wire
 		if (orig_wire != nullptr) {
 			if (sig2src.count(orig_sigmap(orig_wire))) {
 				wire->set_src_attribute(sig2src[orig_sigmap(orig_wire)]);
@@ -1487,7 +1487,7 @@ void AbcModuleState::extract(AbcSigMap &assign_map, dict<SigSpec, std::string> &
 	dict<std::string, int> cell_stats;
 	for (auto c : mapped_mod->cells())
 	{
-		// SILIMATE: set output port to either Y or Q depending on the cell's ports and apply src attribute to the driver cell
+		// Set output port to either Y or Q depending on the cell's ports and apply src attribute to the driver cell
 		Wire *out_wire = c->getPort((c->hasPort(ID::Y)) ? ID::Y : ID::Q).as_wire();
 		Wire *remapped_out_wire = module->wire(remap_name(out_wire->name));
 		std::string src_attribute = sig2src[remapped_out_wire];
@@ -1519,8 +1519,8 @@ void AbcModuleState::extract(AbcSigMap &assign_map, dict<SigSpec, std::string> &
 					RTLIL::IdString remapped_name = remap_name(c->getPort(name).as_wire()->name);
 					cell->setPort(name, module->wire(remapped_name));
 				}
-				cell->set_src_attribute(src_attribute); // SILIMATE: set src attribute from wire
-				cell->fixup_parameters(); // SILIMATE: fix up parameters
+				cell->set_src_attribute(src_attribute); // Set src attribute from wire
+				cell->fixup_parameters(); // Fix up parameters
 				design->select(module, cell);
 				continue;
 			}
@@ -1531,8 +1531,8 @@ void AbcModuleState::extract(AbcSigMap &assign_map, dict<SigSpec, std::string> &
 					RTLIL::IdString remapped_name = remap_name(c->getPort(name).as_wire()->name);
 					cell->setPort(name, module->wire(remapped_name));
 				}
-				cell->set_src_attribute(src_attribute); // SILIMATE: set src attribute from wire
-				cell->fixup_parameters(); // SILIMATE: fix up parameters
+				cell->set_src_attribute(src_attribute); // Set src attribute from wire
+				cell->fixup_parameters(); // Fix up parameters
 				design->select(module, cell);
 				continue;
 			}
@@ -1543,8 +1543,8 @@ void AbcModuleState::extract(AbcSigMap &assign_map, dict<SigSpec, std::string> &
 					RTLIL::IdString remapped_name = remap_name(c->getPort(name).as_wire()->name);
 					cell->setPort(name, module->wire(remapped_name));
 				}
-				cell->set_src_attribute(src_attribute); // SILIMATE: set src attribute from wire
-				cell->fixup_parameters(); // SILIMATE: fix up parameters
+				cell->set_src_attribute(src_attribute); // Set src attribute from wire
+				cell->fixup_parameters(); // Fix up parameters
 				design->select(module, cell);
 				continue;
 			}
@@ -2395,7 +2395,7 @@ struct AbcPass : public Pass {
 			FfInitVals initvals;
 			initvals.set(&assign_map, mod);
 
-			// SILIMATE: Create a map of all signals and their corresponding src attr
+			// Create a map of all signals and their corresponding src attr
 			SigMap sigmap(mod);
 			dict<SigSpec, std::string> sig2src;
 			for (auto wire : mod->wires())
