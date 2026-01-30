@@ -1,0 +1,11 @@
+read_verilog <<EOT
+module top(input a, b, output y);
+  assign y = a & b;
+endmodule
+EOT
+
+setattr -set src "abc_src_test" t:$and
+
+abc -g AND
+
+select -assert-count 1 t:$_AND_ a:src=abc_src_test %i
