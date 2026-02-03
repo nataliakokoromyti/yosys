@@ -305,6 +305,41 @@ RTLIL::IdString new_id_suffix(std::string_view file, int line, std::string_view 
 #define NEW_ID_SUFFIX(suffix) \
 	YOSYS_NAMESPACE_PREFIX new_id_suffix(__FILE__, __LINE__, __FUNCTION__, suffix)
 
+inline std::string removeNumericSuffix(const std::string& str) {
+	size_t pos = str.rfind('_');
+
+	if (pos != std::string::npos && pos + 1 < str.size()) {
+		if (std::all_of(str.begin() + pos + 1, str.end(), ::isdigit)) {
+			return str.substr(0, pos);
+		}
+	}
+	return str;
+}
+
+#ifdef YOSYS_ENABLE_NEW_ID_NAMING
+#define NEW_ID2 cell->module->uniquify(removeNumericSuffix(cell->name.str()))
+#define NEW_ID2_SUFFIX(suffix) cell->module->uniquify(cell->name.str() + "_" + suffix)
+#define NEW_ID3 module->uniquify(cell_name.str())
+#define NEW_ID3_SUFFIX(suffix) module->uniquify(cell_name.str() + "_" + suffix)
+#define NEW_ID4 module->uniquify(name.str())
+#define NEW_ID4_SUFFIX(suffix) module->uniquify(name.str() + "_" + suffix)
+#define NEW_ID5 module->uniquify(name)
+#define NEW_ID5_SUFFIX(suffix) module->uniquify(name + "_" + suffix)
+#define NEW_MEM_ID_SUFFIX(suffix) mem.mem ? module->uniquify(stringf("%s_%s", mem.mem->name.c_str(), suffix)) : module->uniquify(stringf("\\mem_%s", suffix))
+#define NEW_BLIF_ID IdString(stringf("\\boolopt_%d", autoidx++))
+#else
+#define NEW_ID2 NEW_ID
+#define NEW_ID2_SUFFIX(suffix) NEW_ID_SUFFIX(suffix)
+#define NEW_ID3 NEW_ID
+#define NEW_ID3_SUFFIX(suffix) NEW_ID_SUFFIX(suffix)
+#define NEW_ID4 NEW_ID
+#define NEW_ID4_SUFFIX(suffix) NEW_ID_SUFFIX(suffix)
+#define NEW_ID5 NEW_ID
+#define NEW_ID5_SUFFIX(suffix) NEW_ID_SUFFIX(suffix)
+#define NEW_MEM_ID_SUFFIX(suffix) NEW_ID_SUFFIX(suffix)
+#define NEW_BLIF_ID NEW_ID
+#endif
+
 namespace ID = RTLIL::ID;
 
 

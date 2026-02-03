@@ -507,11 +507,11 @@ struct MemoryDffWorker
 
 		merger.remove_output_ff(bits);
 		if (ff.has_ce && !ff.pol_ce)
-			ff.sig_ce = module->LogicNot(NEW_ID, ff.sig_ce);
+			ff.sig_ce = module->LogicNot(NEW_MEM_ID_SUFFIX("ce"), ff.sig_ce);
 		if (ff.has_arst && !ff.pol_arst)
-			ff.sig_arst = module->LogicNot(NEW_ID, ff.sig_arst);
+			ff.sig_arst = module->LogicNot(NEW_MEM_ID_SUFFIX("arst"), ff.sig_arst);
 		if (ff.has_srst && !ff.pol_srst)
-			ff.sig_srst = module->LogicNot(NEW_ID, ff.sig_srst);
+			ff.sig_srst = module->LogicNot(NEW_MEM_ID_SUFFIX("srst"), ff.sig_srst);
 		port.clk = ff.sig_clk;
 		port.clk_enable = true;
 		port.clk_polarity = ff.pol_clk;

@@ -2491,7 +2491,7 @@ Cell *VerificClocking::addDff(IdString name, SigSpec sig_d, SigSpec sig_q, Const
 		if (s.is_wire()) {
 			s.as_wire()->attributes[ID::init] = init_value;
 		} else {
-			Wire *w = module->addWire(NEW_ID, GetSize(s));
+			Wire *w = module->addWire(NEW_ID4_SUFFIX("w"), GetSize(s));
 			w->attributes[ID::init] = init_value;
 			module->connect(s, w);
 			s = w;
@@ -2499,14 +2499,14 @@ Cell *VerificClocking::addDff(IdString name, SigSpec sig_d, SigSpec sig_q, Const
 	};
 
 	if (enable_sig != State::S1)
-		sig_d = module->Mux(NEW_ID, sig_q, sig_d, enable_sig);
+		sig_d = module->Mux(NEW_ID4_SUFFIX("d"), sig_q, sig_d, enable_sig);
 
 	if (disable_sig != State::S0) {
 		log_assert(GetSize(sig_q) == GetSize(init_value));
 
 		if (gclk) {
-			Wire *pre_d = module->addWire(NEW_ID, GetSize(sig_d));
-			Wire *post_q_w = module->addWire(NEW_ID, GetSize(sig_q));
+			Wire *pre_d = module->addWire(NEW_ID4_SUFFIX("pre_d"), GetSize(sig_d));
+			Wire *post_q_w = module->addWire(NEW_ID4_SUFFIX("post_q_w"), GetSize(sig_q));
 
 			Const initval(State::Sx, GetSize(sig_q));
 			int offset = 0;
@@ -2522,8 +2522,8 @@ Cell *VerificClocking::addDff(IdString name, SigSpec sig_d, SigSpec sig_q, Const
 			if (!initval.is_fully_undef())
 				post_q_w->attributes[ID::init] = initval;
 
-			module->addMux(NEW_ID, sig_d, init_value, disable_sig, pre_d);
-			module->addMux(NEW_ID, post_q_w, init_value, disable_sig, sig_q);
+			module->addMux(NEW_ID4_SUFFIX("pre_d_mux"), sig_d, init_value, disable_sig, pre_d);
+			module->addMux(NEW_ID4_SUFFIX("q_mux"), post_q_w, init_value, disable_sig, sig_q);
 
 			SigSpec post_q(post_q_w);
 			set_init_attribute(post_q);
@@ -2550,7 +2550,7 @@ Cell *VerificClocking::addAdff(IdString name, RTLIL::SigSpec sig_arst, SigSpec s
 
 	// FIXME: Adffe
 	if (enable_sig != State::S1)
-		sig_d = module->Mux(NEW_ID, sig_q, sig_d, enable_sig);
+		sig_d = module->Mux(NEW_ID4_SUFFIX("en"), sig_q, sig_d, enable_sig);
 
 	return module->addAdff(name, clock_sig, sig_arst, sig_d, sig_q, arst_value, posedge);
 }
@@ -2562,7 +2562,7 @@ Cell *VerificClocking::addDffsr(IdString name, RTLIL::SigSpec sig_set, RTLIL::Si
 
 	// FIXME: Dffsre
 	if (enable_sig != State::S1)
-		sig_d = module->Mux(NEW_ID, sig_q, sig_d, enable_sig);
+		sig_d = module->Mux(NEW_ID4_SUFFIX("en"), sig_q, sig_d, enable_sig);
 
 	return module->addDffsr(name, clock_sig, sig_set, sig_clr, sig_d, sig_q, posedge);
 }
@@ -2573,11 +2573,11 @@ Cell *VerificClocking::addAldff(IdString name, RTLIL::SigSpec sig_aload, RTLIL::
 
 	// FIXME: Aldffe
 	if (enable_sig != State::S1)
-		sig_d = module->Mux(NEW_ID, sig_q, sig_d, enable_sig);
+		sig_d = module->Mux(NEW_ID4_SUFFIX("en"), sig_q, sig_d, enable_sig);
 
 	if (gclk) {
-		Wire *pre_d = module->addWire(NEW_ID, GetSize(sig_d));
-		Wire *post_q = module->addWire(NEW_ID, GetSize(sig_q));
+		Wire *pre_d = module->addWire(NEW_ID4_SUFFIX("pre_d"), GetSize(sig_d));
+		Wire *post_q = module->addWire(NEW_ID4_SUFFIX("post_q"), GetSize(sig_q));
 
 		Const initval(State::Sx, GetSize(sig_q));
 		int offset = 0;
@@ -2593,8 +2593,8 @@ Cell *VerificClocking::addAldff(IdString name, RTLIL::SigSpec sig_aload, RTLIL::
 		if (!initval.is_fully_undef())
 			post_q->attributes[ID::init] = initval;
 
-		module->addMux(NEW_ID, sig_d, sig_adata, sig_aload, pre_d);
-		module->addMux(NEW_ID, post_q, sig_adata, sig_aload, sig_q);
+		module->addMux(NEW_ID4_SUFFIX("pre_d_mux"), sig_d, sig_adata, sig_aload, pre_d);
+		module->addMux(NEW_ID4_SUFFIX("q_mux"), post_q, sig_adata, sig_aload, sig_q);
 
 		return module->addFf(name, pre_d, post_q);
 	}

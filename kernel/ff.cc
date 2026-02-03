@@ -334,7 +334,7 @@ FfData::FfData(FfInitVals *initvals, Cell *cell_) : FfData(cell_->module, initva
 }
 
 FfData FfData::slice(const std::vector<int> &bits) {
-	FfData res(module, initvals, NEW_ID);
+	FfData res(module, initvals, NEW_ID4);
 	res.sig_clk = sig_clk;
 	res.sig_ce = sig_ce;
 	res.sig_aload = sig_aload;
@@ -488,21 +488,21 @@ void FfData::aload_to_sr() {
 		pol_clr = false;
 		pol_set = true;
 		if (pol_aload) {
-			sig_clr = module->Mux(NEW_ID, Const(State::S1, width), sig_ad, sig_aload);
-			sig_set = module->Mux(NEW_ID, Const(State::S0, width), sig_ad, sig_aload);
+			sig_clr = module->Mux(NEW_ID4_SUFFIX("clr"), Const(State::S1, width), sig_ad, sig_aload);
+			sig_set = module->Mux(NEW_ID4_SUFFIX("set"), Const(State::S0, width), sig_ad, sig_aload);
 		} else {
-			sig_clr = module->Mux(NEW_ID, sig_ad, Const(State::S1, width), sig_aload);
-			sig_set = module->Mux(NEW_ID, sig_ad, Const(State::S0, width), sig_aload);
+			sig_clr = module->Mux(NEW_ID4_SUFFIX("clr"), sig_ad, Const(State::S1, width), sig_aload);
+			sig_set = module->Mux(NEW_ID4_SUFFIX("set"), sig_ad, Const(State::S0, width), sig_aload);
 		}
 	} else {
 		pol_clr = pol_aload;
 		pol_set = pol_aload;
 		if (pol_aload) {
-			sig_clr = module->AndnotGate(NEW_ID, sig_aload, sig_ad);
-			sig_set = module->AndGate(NEW_ID, sig_aload, sig_ad);
+			sig_clr = module->AndnotGate(NEW_ID4_SUFFIX("clr"), sig_aload, sig_ad);
+			sig_set = module->AndGate(NEW_ID4_SUFFIX("set"), sig_aload, sig_ad);
 		} else {
-			sig_clr = module->OrGate(NEW_ID, sig_aload, sig_ad);
-			sig_set = module->OrnotGate(NEW_ID, sig_aload, sig_ad);
+			sig_clr = module->OrGate(NEW_ID4_SUFFIX("clr"), sig_aload, sig_ad);
+			sig_set = module->OrnotGate(NEW_ID4_SUFFIX("set"), sig_aload, sig_ad);
 		}
 	}
 }
@@ -515,31 +515,31 @@ void FfData::convert_ce_over_srst(bool val) {
 		if (!is_fine) {
 			if (pol_ce) {
 				if (pol_srst) {
-					sig_ce = module->Or(NEW_ID, sig_ce, sig_srst);
+					sig_ce = module->Or(NEW_ID4_SUFFIX("ce"), sig_ce, sig_srst);
 				} else {
-					SigSpec tmp = module->Not(NEW_ID, sig_srst);
-					sig_ce = module->Or(NEW_ID, sig_ce, tmp);
+					SigSpec tmp = module->Not(NEW_ID4_SUFFIX("tmp"), sig_srst);
+					sig_ce = module->Or(NEW_ID4_SUFFIX("ce"), sig_ce, tmp);
 				}
 			} else {
 				if (pol_srst) {
-					SigSpec tmp = module->Not(NEW_ID, sig_srst);
-					sig_ce = module->And(NEW_ID, sig_ce, tmp);
+					SigSpec tmp = module->Not(NEW_ID4_SUFFIX("tmp"), sig_srst);
+					sig_ce = module->And(NEW_ID4_SUFFIX("ce"), sig_ce, tmp);
 				} else {
-					sig_ce = module->And(NEW_ID, sig_ce, sig_srst);
+					sig_ce = module->And(NEW_ID4_SUFFIX("ce"), sig_ce, sig_srst);
 				}
 			}
 		} else {
 			if (pol_ce) {
 				if (pol_srst) {
-					sig_ce = module->OrGate(NEW_ID, sig_ce, sig_srst);
+					sig_ce = module->OrGate(NEW_ID4_SUFFIX("ce"), sig_ce, sig_srst);
 				} else {
-					sig_ce = module->OrnotGate(NEW_ID, sig_ce, sig_srst);
+					sig_ce = module->OrnotGate(NEW_ID4_SUFFIX("ce"), sig_ce, sig_srst);
 				}
 			} else {
 				if (pol_srst) {
-					sig_ce = module->AndnotGate(NEW_ID, sig_ce, sig_srst);
+					sig_ce = module->AndnotGate(NEW_ID4_SUFFIX("ce"), sig_ce, sig_srst);
 				} else {
-					sig_ce = module->AndGate(NEW_ID, sig_ce, sig_srst);
+					sig_ce = module->AndGate(NEW_ID4_SUFFIX("ce"), sig_ce, sig_srst);
 				}
 			}
 		}
@@ -548,31 +548,31 @@ void FfData::convert_ce_over_srst(bool val) {
 		if (!is_fine) {
 			if (pol_srst) {
 				if (pol_ce) {
-					sig_srst = cell->module->And(NEW_ID, sig_srst, sig_ce);
+					sig_srst = cell->module->And(NEW_ID4_SUFFIX("srst"), sig_srst, sig_ce);
 				} else {
-					SigSpec tmp = module->Not(NEW_ID, sig_ce);
-					sig_srst = cell->module->And(NEW_ID, sig_srst, tmp);
+					SigSpec tmp = module->Not(NEW_ID4_SUFFIX("tmp"), sig_ce);
+					sig_srst = cell->module->And(NEW_ID4_SUFFIX("srst"), sig_srst, tmp);
 				}
 			} else {
 				if (pol_ce) {
-					SigSpec tmp = module->Not(NEW_ID, sig_ce);
-					sig_srst = cell->module->Or(NEW_ID, sig_srst, tmp);
+					SigSpec tmp = module->Not(NEW_ID4_SUFFIX("tmp"), sig_ce);
+					sig_srst = cell->module->Or(NEW_ID4_SUFFIX("srst"), sig_srst, tmp);
 				} else {
-					sig_srst = cell->module->Or(NEW_ID, sig_srst, sig_ce);
+					sig_srst = cell->module->Or(NEW_ID4_SUFFIX("srst"), sig_srst, sig_ce);
 				}
 			}
 		} else {
 			if (pol_srst) {
 				if (pol_ce) {
-					sig_srst = cell->module->AndGate(NEW_ID, sig_srst, sig_ce);
+					sig_srst = cell->module->AndGate(NEW_ID4_SUFFIX("srst"), sig_srst, sig_ce);
 				} else {
-					sig_srst = cell->module->AndnotGate(NEW_ID, sig_srst, sig_ce);
+					sig_srst = cell->module->AndnotGate(NEW_ID4_SUFFIX("srst"), sig_srst, sig_ce);
 				}
 			} else {
 				if (pol_ce) {
-					sig_srst = cell->module->OrnotGate(NEW_ID, sig_srst, sig_ce);
+					sig_srst = cell->module->OrnotGate(NEW_ID4_SUFFIX("srst"), sig_srst, sig_ce);
 				} else {
-					sig_srst = cell->module->OrGate(NEW_ID, sig_srst, sig_ce);
+					sig_srst = cell->module->OrGate(NEW_ID4_SUFFIX("srst"), sig_srst, sig_ce);
 				}
 			}
 		}
@@ -589,14 +589,14 @@ void FfData::unmap_ce() {
 
 	if (!is_fine) {
 		if (pol_ce)
-			sig_d = module->Mux(NEW_ID, sig_q, sig_d, sig_ce);
+			sig_d = module->Mux(NEW_ID4_SUFFIX("d"), sig_q, sig_d, sig_ce);
 		else
-			sig_d = module->Mux(NEW_ID, sig_d, sig_q, sig_ce);
+			sig_d = module->Mux(NEW_ID4_SUFFIX("d"), sig_d, sig_q, sig_ce);
 	} else {
 		if (pol_ce)
-			sig_d = module->MuxGate(NEW_ID, sig_q, sig_d, sig_ce);
+			sig_d = module->MuxGate(NEW_ID4_SUFFIX("d"), sig_q, sig_d, sig_ce);
 		else
-			sig_d = module->MuxGate(NEW_ID, sig_d, sig_q, sig_ce);
+			sig_d = module->MuxGate(NEW_ID4_SUFFIX("d"), sig_d, sig_q, sig_ce);
 	}
 	has_ce = false;
 }
@@ -609,14 +609,14 @@ void FfData::unmap_srst() {
 
 	if (!is_fine) {
 		if (pol_srst)
-			sig_d = module->Mux(NEW_ID, sig_d, val_srst, sig_srst);
+			sig_d = module->Mux(NEW_ID4_SUFFIX("d"), sig_d, val_srst, sig_srst);
 		else
-			sig_d = module->Mux(NEW_ID, val_srst, sig_d, sig_srst);
+			sig_d = module->Mux(NEW_ID4_SUFFIX("d"), val_srst, sig_d, sig_srst);
 	} else {
 		if (pol_srst)
-			sig_d = module->MuxGate(NEW_ID, sig_d, val_srst[0], sig_srst);
+			sig_d = module->MuxGate(NEW_ID4_SUFFIX("d"), sig_d, val_srst[0], sig_srst);
 		else
-			sig_d = module->MuxGate(NEW_ID, val_srst[0], sig_d, sig_srst);
+			sig_d = module->MuxGate(NEW_ID4_SUFFIX("d"), val_srst[0], sig_d, sig_srst);
 	}
 	has_srst = false;
 }
@@ -789,7 +789,7 @@ void FfData::flip_bits(const pool<int> &bits) {
 
 	flip_rst_bits(bits);
 
-	Wire *new_q = module->addWire(NEW_ID, width);
+	Wire *new_q = module->addWire(NEW_ID4_SUFFIX("new_q"), width);
 
 	if (has_sr && cell) {
 		log_warning("Flipping D/Q/init and inserting priority fixup to legalize %s.%s [%s].\n", log_id(module->name), log_id(cell->name), log_id(cell->type));
@@ -801,15 +801,15 @@ void FfData::flip_bits(const pool<int> &bits) {
 			SigSpec new_sig_clr;
 			if (pol_set) {
 				if (pol_clr) {
-					new_sig_clr = module->AndnotGate(NEW_ID, sig_set, sig_clr);
+					new_sig_clr = module->AndnotGate(NEW_ID4_SUFFIX("new_clr"), sig_set, sig_clr);
 				} else {
-					new_sig_clr = module->AndGate(NEW_ID, sig_set, sig_clr);
+					new_sig_clr = module->AndGate(NEW_ID4_SUFFIX("new_clr"), sig_set, sig_clr);
 				}
 			} else {
 				if (pol_clr) {
-					new_sig_clr = module->OrGate(NEW_ID, sig_set, sig_clr);
+					new_sig_clr = module->OrGate(NEW_ID4_SUFFIX("new_clr"), sig_set, sig_clr);
 				} else {
-					new_sig_clr = module->OrnotGate(NEW_ID, sig_set, sig_clr);
+					new_sig_clr = module->OrnotGate(NEW_ID4_SUFFIX("new_clr"), sig_set, sig_clr);
 				}
 			}
 			pol_set = pol_clr;
@@ -818,10 +818,10 @@ void FfData::flip_bits(const pool<int> &bits) {
 			sig_clr = new_sig_clr;
 		}
 		if (has_clk || has_gclk)
-			sig_d = module->NotGate(NEW_ID, sig_d);
+			sig_d = module->NotGate(NEW_ID4_SUFFIX("d"), sig_d);
 		if (has_aload)
-			sig_ad = module->NotGate(NEW_ID, sig_ad);
-		module->addNotGate(NEW_ID, new_q, sig_q);
+			sig_ad = module->NotGate(NEW_ID4_SUFFIX("ad"), sig_ad);
+		module->addNotGate(NEW_ID4_SUFFIX("not"), new_q, sig_q);
 	}
 	else
 	{
@@ -829,17 +829,17 @@ void FfData::flip_bits(const pool<int> &bits) {
 			SigSpec not_clr;
 			if (!pol_clr) {
 				not_clr = sig_clr;
-				sig_clr = module->Not(NEW_ID, sig_clr);
+				sig_clr = module->Not(NEW_ID4_SUFFIX("clr"), sig_clr);
 				pol_clr = true;
 			} else {
-				not_clr = module->Not(NEW_ID, sig_clr);
+				not_clr = module->Not(NEW_ID4_SUFFIX("not_clr"), sig_clr);
 			}
 			if (!pol_set) {
-				sig_set = module->Not(NEW_ID, sig_set);
+				sig_set = module->Not(NEW_ID4_SUFFIX("set"), sig_set);
 				pol_set = true;
 			}
 
-			SigSpec masked_set = module->And(NEW_ID, sig_set, not_clr);
+			SigSpec masked_set = module->And(NEW_ID4_SUFFIX("masked_set"), sig_set, not_clr);
 			for (auto bit: bits) {
 				sig_set[bit] = sig_clr[bit];
 				sig_clr[bit] = masked_set[bit];
@@ -851,10 +851,10 @@ void FfData::flip_bits(const pool<int> &bits) {
 			mask.set(bit, State::S1);
 
 		if (has_clk || has_gclk)
-			sig_d = module->Xor(NEW_ID, sig_d, mask);
+			sig_d = module->Xor(NEW_ID4_SUFFIX("d"), sig_d, mask);
 		if (has_aload)
-			sig_ad = module->Xor(NEW_ID, sig_ad, mask);
-		module->addXor(NEW_ID, new_q, mask, sig_q);
+			sig_ad = module->Xor(NEW_ID4_SUFFIX("ad"), sig_ad, mask);
+		module->addXor(NEW_ID4_SUFFIX("xor"), new_q, mask, sig_q);
 	}
 
 	sig_q = new_q;
