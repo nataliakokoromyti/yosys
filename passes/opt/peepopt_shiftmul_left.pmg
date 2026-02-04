@@ -78,7 +78,7 @@ endmatch
 
 code
 {
-	Cell *cell = shift;
+	YS_MAYBE_UNUSED Cell *cell = shift;
 
 	if (mul_const.empty() || GetSize(mul_const) > 20)
 		reject;

@@ -369,7 +369,7 @@ struct ClockgatePass : public Pass {
 				if (!matching_icg_desc)
 					continue;
 
-				Cell* cell = *ce_ffs.begin();
+				YS_MAYBE_UNUSED Cell* cell = *ce_ffs.begin();
 				Cell* icg = module->addCell(NEW_ID2_SUFFIX("icg"), matching_icg_desc->name);
 				icg->setPort(matching_icg_desc->ce_pin, clk.ce_bit);
 				icg->setPort(matching_icg_desc->clk_in_pin, clk.clk_bit);

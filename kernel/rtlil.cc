@@ -3330,7 +3330,7 @@ RTLIL::Process *RTLIL::Module::addProcess(RTLIL::IdString name, const RTLIL::Pro
 		return cell;                                        \
 	} \
 	RTLIL::SigSpec RTLIL::Module::_func(RTLIL::IdString name, const RTLIL::SigSpec &sig_a, bool is_signed, const std::string &src) { \
-		Module *module = this; \
+		YS_MAYBE_UNUSED Module *module = this; \
 		RTLIL::SigSpec sig_y = addWire(NEW_ID4_SUFFIX("y"), _y_size);    \
 		add ## _func(name, sig_a, sig_y, is_signed, src);   \
 		return sig_y;                                       \
@@ -3356,7 +3356,7 @@ DEF_METHOD(LogicNot,   1, ID($logic_not))
 		return cell;                                        \
 	} \
 	RTLIL::SigSpec RTLIL::Module::_func(RTLIL::IdString name, const RTLIL::SigSpec &sig_a, bool is_signed, const std::string &src) { \
-		Module *module = this; \
+		YS_MAYBE_UNUSED Module *module = this; \
 		RTLIL::SigSpec sig_y = addWire(NEW_ID4_SUFFIX("y"), _y_size);    \
 		add ## _func(name, sig_a, sig_y, is_signed, src);   \
 		return sig_y;                                       \
@@ -3379,7 +3379,7 @@ DEF_METHOD(Buf, sig_a.size(), ID($buf))
 		return cell;                                        \
 	} \
 	RTLIL::SigSpec RTLIL::Module::_func(RTLIL::IdString name, const RTLIL::SigSpec &sig_a, const RTLIL::SigSpec &sig_b, bool is_signed, const std::string &src) { \
-		Module *module = this; \
+		YS_MAYBE_UNUSED Module *module = this; \
 		RTLIL::SigSpec sig_y = addWire(NEW_ID4_SUFFIX("y"), _y_size);         \
 		add ## _func(name, sig_a, sig_b, sig_y, is_signed, src); \
 		return sig_y;                                            \
@@ -3423,7 +3423,7 @@ DEF_METHOD(LogicOr,  1, ID($logic_or))
 		return cell;                                        \
 	} \
 	RTLIL::SigSpec RTLIL::Module::_func(RTLIL::IdString name, const RTLIL::SigSpec &sig_a, const RTLIL::SigSpec &sig_b, bool is_signed, const std::string &src) { \
-		Module *module = this; \
+		YS_MAYBE_UNUSED Module *module = this; \
 		RTLIL::SigSpec sig_y = addWire(NEW_ID4_SUFFIX("y"), _y_size);         \
 		add ## _func(name, sig_a, sig_b, sig_y, is_signed, src); \
 		return sig_y;                                            \

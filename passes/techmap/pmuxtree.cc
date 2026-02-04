@@ -23,7 +23,7 @@
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
 
-static SigSpec or_generator(Module *module, Cell *cell, const SigSpec &sig)
+static SigSpec or_generator(Module *module, YS_MAYBE_UNUSED Cell *cell, const SigSpec &sig)
 {
 	switch (GetSize(sig))
 	{
@@ -38,7 +38,7 @@ static SigSpec or_generator(Module *module, Cell *cell, const SigSpec &sig)
 	}
 }
 
-static SigSpec recursive_mux_generator(Module *module, Cell *cell, const SigSpec &sig_data, const SigSpec &sig_sel, SigSpec &sig_or)
+static SigSpec recursive_mux_generator(Module *module, YS_MAYBE_UNUSED Cell *cell, const SigSpec &sig_data, const SigSpec &sig_sel, SigSpec &sig_or)
 {
 	if (GetSize(sig_sel) == 1) {
 		sig_or.append(sig_sel);
