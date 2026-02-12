@@ -272,8 +272,10 @@ bool group_cell_inputs(RTLIL::Module *module, RTLIL::Cell *cell, bool commutativ
 			new_y = std::move(def_y);
 		}
 
-
-		RTLIL::Cell *c = module->addCell(NEW_ID2, cell->type);
+#ifdef YOSYS_ENABLE_NEW_ID2_NAMING
+		RTLIL::IdString cell_name = cell->name;
+#endif
+		RTLIL::Cell *c = module->addCell(NEW_ID3, cell->type);
 
 		c->setPort(ID::A, new_a);
 		c->parameters[ID::A_WIDTH] = new_a.size();
@@ -1941,7 +1943,10 @@ skip_identity:
 				int sz = cur - prev;
 				bool last = cur == GetSize(sig_y);
 
-				RTLIL::Cell *c = module->addCell(NEW_ID2, cell->type);
+#ifdef YOSYS_ENABLE_NEW_ID2_NAMING
+				RTLIL::IdString cell_name = cell->name;
+#endif
+				RTLIL::Cell *c = module->addCell(NEW_ID3, cell->type);
 				c->setPort(ID::A, sig_a.extract(prev, sz));
 				c->setPort(ID::B, sig_b.extract(prev, sz));
 				c->setPort(ID::BI, sig_bi);
@@ -1951,7 +1956,7 @@ skip_identity:
 				RTLIL::SigSpec new_co = sig_co.extract(prev, sz);
 				if (p.second != State::Sx) {
 					module->connect(new_co[sz-1], p.second);
-					RTLIL::Wire *dummy = module->addWire(NEW_ID2_SUFFIX("dummy"));
+					RTLIL::Wire *dummy = module->addWire(NEW_ID3_SUFFIX("dummy"));
 					new_co[sz-1] = dummy;
 				}
 				c->setPort(ID::CO, new_co);

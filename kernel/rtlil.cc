@@ -4177,7 +4177,10 @@ RTLIL::Cell* RTLIL::Module::addAnyinit(RTLIL::IdString name, const RTLIL::SigSpe
 
 RTLIL::SigSpec RTLIL::Module::Anyconst(RTLIL::IdString name, int width, const std::string &src)
 {
-	RTLIL::SigSpec sig = addWire(NEW_ID, width);
+#ifdef YOSYS_ENABLE_NEW_ID2_NAMING
+	Module *module = this;
+#endif
+	RTLIL::SigSpec sig = addWire((name.empty() || (name.str()[0] != '\\' && name.str()[0] != '$')) ? NEW_ID : NEW_ID4, width);
 	Cell *cell = addCell(name, ID($anyconst));
 	cell->setParam(ID::WIDTH, width);
 	cell->setPort(ID::Y, sig);
@@ -4187,7 +4190,10 @@ RTLIL::SigSpec RTLIL::Module::Anyconst(RTLIL::IdString name, int width, const st
 
 RTLIL::SigSpec RTLIL::Module::Anyseq(RTLIL::IdString name, int width, const std::string &src)
 {
-	RTLIL::SigSpec sig = addWire(NEW_ID, width);
+#ifdef YOSYS_ENABLE_NEW_ID2_NAMING
+	Module *module = this;
+#endif
+	RTLIL::SigSpec sig = addWire((name.empty() || (name.str()[0] != '\\' && name.str()[0] != '$')) ? NEW_ID : NEW_ID5, width);
 	Cell *cell = addCell(name, ID($anyseq));
 	cell->setParam(ID::WIDTH, width);
 	cell->setPort(ID::Y, sig);
@@ -4197,7 +4203,10 @@ RTLIL::SigSpec RTLIL::Module::Anyseq(RTLIL::IdString name, int width, const std:
 
 RTLIL::SigSpec RTLIL::Module::Allconst(RTLIL::IdString name, int width, const std::string &src)
 {
-	RTLIL::SigSpec sig = addWire(NEW_ID, width);
+#ifdef YOSYS_ENABLE_NEW_ID2_NAMING
+	Module *module = this;
+#endif
+	RTLIL::SigSpec sig = addWire((name.empty() || (name.str()[0] != '\\' && name.str()[0] != '$')) ? NEW_ID : NEW_ID4, width);
 	Cell *cell = addCell(name, ID($allconst));
 	cell->setParam(ID::WIDTH, width);
 	cell->setPort(ID::Y, sig);
@@ -4207,7 +4216,10 @@ RTLIL::SigSpec RTLIL::Module::Allconst(RTLIL::IdString name, int width, const st
 
 RTLIL::SigSpec RTLIL::Module::Allseq(RTLIL::IdString name, int width, const std::string &src)
 {
-	RTLIL::SigSpec sig = addWire(NEW_ID, width);
+#ifdef YOSYS_ENABLE_NEW_ID2_NAMING
+	Module *module = this;
+#endif
+	RTLIL::SigSpec sig = addWire((name.empty() || (name.str()[0] != '\\' && name.str()[0] != '$')) ? NEW_ID : NEW_ID5, width);
 	Cell *cell = addCell(name, ID($allseq));
 	cell->setParam(ID::WIDTH, width);
 	cell->setPort(ID::Y, sig);
@@ -4217,7 +4229,10 @@ RTLIL::SigSpec RTLIL::Module::Allseq(RTLIL::IdString name, int width, const std:
 
 RTLIL::SigSpec RTLIL::Module::Initstate(RTLIL::IdString name, const std::string &src)
 {
-	RTLIL::SigSpec sig = addWire(NEW_ID);
+#ifdef YOSYS_ENABLE_NEW_ID2_NAMING
+	Module *module = this;
+#endif
+	RTLIL::SigSpec sig = addWire((name.empty() || (name.str()[0] != '\\' && name.str()[0] != '$')) ? NEW_ID : NEW_ID5);
 	Cell *cell = addCell(name, ID($initstate));
 	cell->setPort(ID::Y, sig);
 	cell->set_src_attribute(src);
@@ -4226,7 +4241,10 @@ RTLIL::SigSpec RTLIL::Module::Initstate(RTLIL::IdString name, const std::string 
 
 RTLIL::SigSpec RTLIL::Module::SetTag(RTLIL::IdString name, const std::string &tag, const RTLIL::SigSpec &sig_a, const RTLIL::SigSpec &sig_s, const RTLIL::SigSpec &sig_c, const std::string &src)
 {
-	RTLIL::SigSpec sig = addWire(NEW_ID, sig_a.size());
+#ifdef YOSYS_ENABLE_NEW_ID2_NAMING
+	Module *module = this;
+#endif
+	RTLIL::SigSpec sig = addWire((name.empty() || (name.str()[0] != '\\' && name.str()[0] != '$')) ? NEW_ID : NEW_ID5, sig_a.size());
 	Cell *cell = addCell(name, ID($set_tag));
 	cell->parameters[ID::WIDTH] = sig_a.size();
 	cell->parameters[ID::TAG] = tag;
@@ -4253,7 +4271,10 @@ RTLIL::Cell* RTLIL::Module::addSetTag(RTLIL::IdString name, const std::string &t
 
 RTLIL::SigSpec RTLIL::Module::GetTag(RTLIL::IdString name, const std::string &tag, const RTLIL::SigSpec &sig_a, const std::string &src)
 {
-	RTLIL::SigSpec sig = addWire(NEW_ID, sig_a.size());
+#ifdef YOSYS_ENABLE_NEW_ID2_NAMING
+	Module *module = this;
+#endif
+	RTLIL::SigSpec sig = addWire((name.empty() || (name.str()[0] != '\\' && name.str()[0] != '$')) ? NEW_ID : NEW_ID5, sig_a.size());
 	Cell *cell = addCell(name, ID($get_tag));
 	cell->parameters[ID::WIDTH] = sig_a.size();
 	cell->parameters[ID::TAG] = tag;
@@ -4277,7 +4298,10 @@ RTLIL::Cell* RTLIL::Module::addOverwriteTag(RTLIL::IdString name, const std::str
 
 RTLIL::SigSpec RTLIL::Module::OriginalTag(RTLIL::IdString name, const std::string &tag, const RTLIL::SigSpec &sig_a, const std::string &src)
 {
-	RTLIL::SigSpec sig = addWire(NEW_ID, sig_a.size());
+#ifdef YOSYS_ENABLE_NEW_ID2_NAMING
+	Module *module = this;
+#endif
+	RTLIL::SigSpec sig = addWire((name.empty() || (name.str()[0] != '\\' && name.str()[0] != '$')) ? NEW_ID : NEW_ID5, sig_a.size());
 	Cell *cell = addCell(name, ID($original_tag));
 	cell->parameters[ID::WIDTH] = sig_a.size();
 	cell->parameters[ID::TAG] = tag;
@@ -4289,7 +4313,10 @@ RTLIL::SigSpec RTLIL::Module::OriginalTag(RTLIL::IdString name, const std::strin
 
 RTLIL::SigSpec RTLIL::Module::FutureFF(RTLIL::IdString name, const RTLIL::SigSpec &sig_e, const std::string &src)
 {
-	RTLIL::SigSpec sig = addWire(NEW_ID, sig_e.size());
+#ifdef YOSYS_ENABLE_NEW_ID2_NAMING
+	Module *module = this;
+#endif
+	RTLIL::SigSpec sig = addWire((name.empty() || (name.str()[0] != '\\' && name.str()[0] != '$')) ? NEW_ID : NEW_ID5, sig_e.size());
 	Cell *cell = addCell(name, ID($future_ff));
 	cell->parameters[ID::WIDTH] = sig_e.size();
 	cell->setPort(ID::A, sig_e);
