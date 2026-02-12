@@ -38,6 +38,7 @@
 #include <memory>
 #include <cmath>
 #include <cstddef>
+#include <cctype>
 
 #include <sstream>
 #include <fstream>
@@ -304,6 +305,41 @@ RTLIL::IdString new_id_suffix(std::string_view file, int line, std::string_view 
 	}(__FUNCTION__))
 #define NEW_ID_SUFFIX(suffix) \
 	YOSYS_NAMESPACE_PREFIX new_id_suffix(__FILE__, __LINE__, __FUNCTION__, suffix)
+
+inline std::string remove_numeric_suffix(std::string_view str)
+{
+	size_t pos = str.rfind('_');
+	if (pos == std::string_view::npos || pos + 1 >= str.size())
+		return std::string(str);
+
+	bool numeric_suffix = std::all_of(str.begin() + pos + 1, str.end(), [](unsigned char ch) {
+		return std::isdigit(ch) != 0;
+	});
+	if (!numeric_suffix)
+		return std::string(str);
+
+	return std::string(str.substr(0, pos));
+}
+
+#ifdef YOSYS_ENABLE_NEW_ID2_NAMING
+#define NEW_ID2 cell->module->uniquify(remove_numeric_suffix(cell->name.str()))
+#define NEW_ID2_SUFFIX(suffix) cell->module->uniquify(cell->name.str() + "_" + suffix)
+#define NEW_ID3 module->uniquify(cell_name.str())
+#define NEW_ID3_SUFFIX(suffix) module->uniquify(cell_name.str() + "_" + suffix)
+#define NEW_ID4 module->uniquify(name.str())
+#define NEW_ID4_SUFFIX(suffix) module->uniquify(name.str() + "_" + suffix)
+#define NEW_ID5 module->uniquify(name)
+#define NEW_ID5_SUFFIX(suffix) module->uniquify(name + "_" + suffix)
+#else
+#define NEW_ID2 NEW_ID
+#define NEW_ID2_SUFFIX(suffix) NEW_ID_SUFFIX(suffix)
+#define NEW_ID3 NEW_ID
+#define NEW_ID3_SUFFIX(suffix) NEW_ID_SUFFIX(suffix)
+#define NEW_ID4 NEW_ID
+#define NEW_ID4_SUFFIX(suffix) NEW_ID_SUFFIX(suffix)
+#define NEW_ID5 NEW_ID
+#define NEW_ID5_SUFFIX(suffix) NEW_ID_SUFFIX(suffix)
+#endif
 
 namespace ID = RTLIL::ID;
 
