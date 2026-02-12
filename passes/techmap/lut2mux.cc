@@ -33,27 +33,27 @@ int lut2mux(Cell *cell, bool word_mode)
 	if (GetSize(sig_a) == 1)
 	{
 		if (!word_mode)
-			cell->module->addMuxGate(NEW_ID, lut.extract(0)[0], lut.extract(1)[0], sig_a, sig_y); 
+			cell->module->addMuxGate(NEW_ID2, lut.extract(0)[0], lut.extract(1)[0], sig_a, sig_y); 
 		else
-		    cell->module->addMux(NEW_ID, lut.extract(0)[0], lut.extract(1)[0], sig_a, sig_y);
+		    cell->module->addMux(NEW_ID2, lut.extract(0)[0], lut.extract(1)[0], sig_a, sig_y);
 	}
 	else
 	{
 		SigSpec sig_a_hi = sig_a[GetSize(sig_a)-1];
 		SigSpec sig_a_lo = sig_a.extract(0, GetSize(sig_a)-1);
-		SigSpec sig_y1 = cell->module->addWire(NEW_ID);
-		SigSpec sig_y2 = cell->module->addWire(NEW_ID);
+		SigSpec sig_y1 = cell->module->addWire(NEW_ID2);
+		SigSpec sig_y2 = cell->module->addWire(NEW_ID2);
 
 		Const lut1 = lut.extract(0, GetSize(lut)/2);
 		Const lut2 = lut.extract(GetSize(lut)/2, GetSize(lut)/2);
 
-		count += lut2mux(cell->module->addLut(NEW_ID, sig_a_lo, sig_y1, lut1), word_mode); 
-		count += lut2mux(cell->module->addLut(NEW_ID, sig_a_lo, sig_y2, lut2), word_mode);
+		count += lut2mux(cell->module->addLut(NEW_ID2, sig_a_lo, sig_y1, lut1), word_mode); 
+		count += lut2mux(cell->module->addLut(NEW_ID2, sig_a_lo, sig_y2, lut2), word_mode);
 
 		if (!word_mode)
-			cell->module->addMuxGate(NEW_ID, sig_y1, sig_y2, sig_a_hi, sig_y); 
+			cell->module->addMuxGate(NEW_ID2, sig_y1, sig_y2, sig_a_hi, sig_y); 
 		else
-			cell->module->addMux(NEW_ID, sig_y1, sig_y2, sig_a_hi, sig_y);
+			cell->module->addMux(NEW_ID2, sig_y1, sig_y2, sig_a_hi, sig_y);
 	}
 
 	cell->module->remove(cell);
