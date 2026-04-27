@@ -1,0 +1,17 @@
+read_verilog <<'EOT'
+module top (
+	input clk,
+	input [22:17] d,
+	output reg [22:17] q
+);
+	always @(posedge clk)
+		q <= d;
+endmodule
+EOT
+
+proc
+splitcells -blast -format []:
+
+select -assert-count 6 t:$dff
+select -assert-count 1 c:*[17]
+select -assert-count 1 c:*[22]

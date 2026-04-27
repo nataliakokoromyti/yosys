@@ -90,14 +90,28 @@ struct SplitcellsWorker
 			slices.push_back(GetSize(outsig));
 
 			log("Splitting %s cell %s/%s into %d slices:\n", log_id(cell->type), log_id(module), log_id(cell), GetSize(slices)-1);
+			SigSpec raw_q = cell->getPort(ID::Q);
+			auto user_index = [&](int idx) -> int {
+				if (idx < GetSize(raw_q) && raw_q[idx].is_wire()) {
+					Wire *w = raw_q[idx].wire;
+					if (w->upto)
+						return w->start_offset + w->width - 1 - raw_q[idx].offset;
+					return w->start_offset + raw_q[idx].offset;
+				}
+				return idx;
+			};
 			for (int i = 1; i < GetSize(slices); i++)
 			{
 				int slice_msb = slices[i]-1;
 				int slice_lsb = slices[i-1];
+				int name_lsb = user_index(slice_lsb);
+				int name_msb = user_index(slice_msb);
+				if (name_lsb > name_msb)
+					std::swap(name_lsb, name_msb);
 
 				IdString slice_name = module->uniquify(cell->name.str() + (slice_msb == slice_lsb ?
-						stringf("%c%d%c", format[0], slice_lsb, format[1]) :
-						stringf("%c%d%c%d%c", format[0], slice_msb, format[2], slice_lsb, format[1])));
+						stringf("%c%d%c", format[0], name_lsb, format[1]) :
+						stringf("%c%d%c%d%c", format[0], name_msb, format[2], name_lsb, format[1])));
 
 				Cell *slice = module->addCell(slice_name, cell);
 
